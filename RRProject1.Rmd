@@ -1,0 +1,97 @@
+---
+title: "RRPoject1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+First we import the file from the csv table, keeping stringsAsFactors false so we can convert the date column to a date type more easily.
+
+```{r}
+FitBit_data <- read.csv("activity.csv", stringsAsFactors = FALSE)
+```
+
+Next we convert the date column from a character to a Date format.  The format is already in the default yyyy-mm-dd format.
+
+``` {r}
+FitBit_data$date <- as.Date(FitBit_data$date)
+```
+
+Let's look at the total number of steps walked each day.  We create a list of sums using the tapply function to sum by the date.  NA values are removed, and a histogram of the resulting sums is plotted.
+
+```{r}
+sums <- tapply(FitBit_data$steps,FitBit_data$date, sum,na.rm = TRUE)
+```
+```{r echo = FALSE}
+hist(sums,breaks = 20,main = "Total Steps per Day",xlab = "Total Steps per Day")
+```
+
+To get the means and medians of the total steps per day, we apply a similar procedure using tapply.
+
+```{r}
+means <- tapply(FitBit_data$steps,FitBit_data$date, mean,na.rm = TRUE)
+medians <- tapply(FitBit_data$steps,FitBit_data$date, median,na.rm = TRUE)
+```
+
+Now we plot the mean number of steps each day
+
+```{r}
+plot(unique(FitBit_data$date), means,xlab = "Date",ylab = "Average Steps per Day", main = "Average Steps per Day vs Time")
+```
+
+To find the interval that, on average, contains the greatest number of steps, we again use tapply to apply the mean function to the steps column by interval number.  The max and which.max functions are used to find the maximum value of the resulting means, and the index at which the maximum value occurs.
+
+```{r}
+intervalmeans <- tapply(FitBit_data$steps,FitBit_data$interval, mean, na.rm = TRUE)
+intervals <- unique(FitBit_data$interval)
+maxmean <- max(intervalmeans)
+imax <- which.max(intervalmeans)
+maxinterval <- intervals[imax]
+```
+Thus the maximum number of steps on average is `r maxmean` in interval `r maxinterval`.
+
+The NA values are replaced with the mean over all the recorded steps.  This will prevent the mean being thrown off by the replacement value and account for the fact that some days have no non-missing values at all.  At the end, we check that there are no missing values by summing the is.na function on the steps column.
+
+```{r}
+replaceNA <- mean(FitBit_data$steps, na.rm = TRUE)
+for(i in 1:length(FitBit_data$steps)){
+  if(is.na(FitBit_data$steps[i] == TRUE)){
+    FitBit_data$steps[i] <- replaceNA
+  }
+}
+check <- sum(is.na(FitBit_data$steps))
+```
+
+The check results in `r check`, so we can proceed.
+
+We now do the same procedure as before to find the total number of steps each day.
+
+```{r}
+sums <- tapply(FitBit_data$steps,FitBit_data$date, sum)
+```
+
+And plot a histogram as before.
+
+```{r}
+hist(sums,breaks = 20,xlab = "Total Steps per Day", main = "Total Steps per Day")
+```
+
+We use the subset and weekday functions to create a Monday through Friday (MF) data table and a Saturday and Sunday (SS) datatable.  The average number of steps per interval for each is again calculated using the tapply operator.
+
+```{r}
+MF <- subset(FitBit_data, weekdays(date) != "Saturday" | weekdays(date) != "Sunday")
+SS <- subset(FitBit_data, weekdays(date) == "Saturday" | weekdays(date) == "Sunday")
+meansMF = tapply(MF$steps,MF$interval,mean)
+meansSS = tapply(SS$steps,SS$interval,mean)
+```
+
+We plot the resulting mean steps per interval on weekdays and weekends.
+
+```{r}
+par(mfrow=c(1,2))
+plot(unique(MF$interval),meansMF, xlab = "Interval #", ylab = "Mean Steps during Inteval", main = "Weekdays")
+plot(unique(SS$interval),meansSS, xlab = "Interval #", ylab = "Mean Steps during Inteval", main = "Weekends")
+```
